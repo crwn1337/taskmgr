@@ -8,20 +8,19 @@
 #include <winnt.h>
 
 namespace hooks {
-	bool __fastcall IsServer_hook(void* a) {
+	bool __fastcall IsServer_hook(global_settings* settings) {
 		if (!config.globalsettings) {
-			config.globalsettings = a;
-			printf("g_GlobalSettings: 0x%p\n", a);
-			config.original_cores = *(uint16_t*)((size_t)a + 0x944);
+			printf("g_GlobalSettings: 0x%p\n", settings);
+			config.globalsettings = settings;
+			config.original_cores = settings->cores;
 		}
-		*(uint16_t*)((size_t)a + 0x944) = config.cores;
-		return config.IsServer_original(a);
+		settings->cores = config.cores;
+		return config.IsServer_original(settings);
 	}
 
 	int __fastcall SetBlockData_hook(void* a1, uint32_t core, wchar_t* text, uint32_t fill_color, uint32_t border_color) {
 		uint32_t color = utils::rgb_to_cmyk(255, 255, 255);
-		std::wstring string = L"deez";
-		return config.SetBlockData_original(a1, core, string.data(), color, color);
+		return config.SetBlockData_original(a1, core, (wchar_t*)L"deez", color, color);
 	}
 
 	void init() {
@@ -47,8 +46,7 @@ namespace hooks {
 	void deinit() {
 		// most of this is useless since taskmanager doesn't use new values once initialized
 		config.SetRefreshRate_original(nullptr, 1000);
-		config.cores = config.original_cores;
-		config.IsServer_original(config.globalsettings);
+		config.globalsettings->cores = config.original_cores;
 
 		MH_DisableHook(MH_ALL_HOOKS);
 		MH_RemoveHook(MH_ALL_HOOKS);
