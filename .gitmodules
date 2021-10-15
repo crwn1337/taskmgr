@@ -1,3 +1,6 @@
 [submodule "taskmgr/external/minhook"]
 	path = taskmgr/external/minhook
 	url = https://github.com/TsudaKageyu/minhook
+[submodule "taskmgr/external/bitmap"]
+	path = taskmgr/external/bitmap
+	url = https://github.com/ArashPartow/bitmap

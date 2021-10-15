@@ -1,6 +1,7 @@
 ﻿#include "hooks.h"
 
 #include "external/minhook/include/MinHook.h"
+#include "external/bitmap/bitmap_image.hpp"
 #include "config.h"
 #include "utils.h"
 #include <iostream>
@@ -17,10 +18,27 @@ namespace hooks {
 		settings->cores = config.cores;
 		return config.IsServer_original(settings);
 	}
-
 	int __fastcall SetBlockData_hook(void* a1, uint32_t core, wchar_t* text, uint32_t fill_color, uint32_t border_color) {
-		uint32_t color = utils::rgb_to_cmyk(255, 255, 255);
-		return config.SetBlockData_original(a1, core, (wchar_t*)L"deez", color, color);
+		static bitmap_image image(config.image_path.string());
+		if (!image) {
+			printf("no image found or target image is invalid (should be 24bit bmp)\n");
+			return config.SetBlockData_original(a1, core, text, fill_color, border_color);
+		}
+
+		if (image.width() != 41 || image.height() != 35) {
+			printf("bmp width or height not correct! (should be 41, 35)\n");
+			return config.SetBlockData_original(a1, core, text, fill_color, border_color);
+		}
+
+		unsigned int row = core % 41;
+		unsigned int column = (unsigned int)std::floor(core / 41);
+
+		rgb_t color;
+
+		image.get_pixel(row, column, color);
+
+		uint32_t cmyk = utils::rgb_to_cmyk(color.red, color.green, color.blue);
+		return config.SetBlockData_original(a1, core, (wchar_t*)L"", cmyk, cmyk);
 	}
 
 	void init() {

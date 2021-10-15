@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <cstdint>
+#include <filesystem>
 
 struct global_settings {
     char pad[0x944];
@@ -11,7 +12,8 @@ struct global_settings {
 class c_config {
 public:
     HMODULE hmodule;
-    uint16_t cores = 41 * 35;
+    std::filesystem::path image_path;
+    uint16_t cores = 41 * 35; // width * height
     uint16_t original_cores;
     global_settings* globalsettings{};
     bool(__fastcall* IsServer_original)(void*);
