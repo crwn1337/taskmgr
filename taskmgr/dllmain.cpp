@@ -1,5 +1,4 @@
 #include <Windows.h>
-#include <cstdio>
 #include "main.h"
 
 BOOL APIENTRY DllMain(HMODULE h_module, DWORD reason) {

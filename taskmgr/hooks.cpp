@@ -1,12 +1,11 @@
 ﻿#include "hooks.h"
-
-#include "external/minhook/include/MinHook.h"
-#include "external/bitmap/bitmap_image.hpp"
 #include "config.h"
 #include "utils.h"
+#include "external/minhook/include/MinHook.h"
+#include "external/bitmap/bitmap_image.hpp"
+
 #include <iostream>
-#include <wingdi.h>
-#include <winnt.h>
+#include <chrono>
 
 namespace hooks {
 	bool __fastcall IsServer_hook(global_settings* settings) {
@@ -15,30 +14,30 @@ namespace hooks {
 			config.globalsettings = settings;
 			config.original_cores = settings->cores;
 		}
-		settings->cores = config.cores;
+		settings->cores = config.width * config.height;
 		return config.IsServer_original(settings);
 	}
+
 	int __fastcall SetBlockData_hook(void* a1, uint32_t core, wchar_t* text, uint32_t fill_color, uint32_t border_color) {
-		static bitmap_image image(config.image_path.string());
-		if (!image) {
-			printf("no image found or target image is invalid (should be 24bit bmp)\n");
-			return config.SetBlockData_original(a1, core, text, fill_color, border_color);
+		auto row = core % config.width;
+		auto column = std::floor(core / config.width);
+		static auto time = std::chrono::steady_clock::now();
+		static int frame = 1;
+
+		auto elapsed_time = std::chrono::steady_clock::now() - time;
+		auto duration = std::chrono::duration<intmax_t, std::nano>{ std::nano::den / config.fps };
+		if (core == 0 && elapsed_time >= duration) {
+			using namespace std::literals;
+			time = (std::chrono::steady_clock::now() - (elapsed_time - std::chrono::nanoseconds(duration.count())));
+			frame++;
 		}
 
-		if (image.width() != 41 || image.height() != 35) {
-			printf("bmp width or height not correct! (should be 41, 35)\n");
-			return config.SetBlockData_original(a1, core, text, fill_color, border_color);
-		}
+		auto color = config.colors[frame][core];
+		return config.SetBlockData_original(a1, core, (wchar_t*)L"", color, color);
+	}
 
-		unsigned int row = core % 41;
-		unsigned int column = (unsigned int)std::floor(core / 41);
-
-		rgb_t color;
-
-		image.get_pixel(row, column, color);
-
-		uint32_t cmyk = utils::rgb_to_cmyk(color.red, color.green, color.blue);
-		return config.SetBlockData_original(a1, core, (wchar_t*)L"", cmyk, cmyk);
+	__int64 __fastcall GetBlockWidth_hook(void* a1) {
+		return 17; // magic number
 	}
 
 	void init() {
@@ -53,10 +52,15 @@ namespace hooks {
 		MH_CreateHook((void*)SetBlockData, SetBlockData_hook, (void**)&config.SetBlockData_original);
 		MH_QueueEnableHook((void*)SetBlockData);
 
+		auto GetBlockWidth = utils::find_pattern("Taskmgr.exe", "48 83 EC ? 48 8B 05 ? ? ? ? 48 33 C4 48 89 44 24 ? 66 0F 6F 05");
+		printf("GetBlockWidth: 0x%p\n", (void*)GetBlockWidth);
+		MH_CreateHook((void*)GetBlockWidth, GetBlockWidth_hook, (void**)&config.GetBlockWidth_original);
+		MH_QueueEnableHook((void*)GetBlockWidth);
+
 		auto SetRefreshRate = utils::find_pattern("Taskmgr.exe", "48 89 5C 24 ? 48 89 74 24 ? 57 48 83 EC ? 48 8B 3D ? ? ? ? 8B F2");
 		config.SetRefreshRate_original = decltype(config.SetRefreshRate_original)(SetRefreshRate);
 		printf("SetRefreshRate: 0x%p\n", (void*)SetRefreshRate);
-		config.SetRefreshRate_original(nullptr, 1000 / 60);
+		config.SetRefreshRate_original(nullptr, 0);
 
 		MH_ApplyQueued();
 	}

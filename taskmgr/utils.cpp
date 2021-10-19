@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <algorithm>
 
 namespace utils {
 	// TODO: fix this, uses a scuffed way to get around some problems (K defined as int)
@@ -20,6 +21,10 @@ namespace utils {
 			Y = (Y - K) / (1 - K);
 		}
 		return (uint8_t)(C * 255) << 0 | (uint8_t)(M * 255) << 8 | (uint8_t)(Y * 255) << 16 | (uint8_t)(0xff) << 24;
+	}
+
+	bool is_number(const std::string& s) {
+		return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
 	}
 
 	std::vector<int> string_to_hex_array(const char* string) {
