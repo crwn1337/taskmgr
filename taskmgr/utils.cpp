@@ -58,7 +58,7 @@ namespace utils {
 		auto pat = string_to_hex_array(pattern.c_str());
 
 		for (auto i = start; i < (start + size); i++) {
-			for (size_t j = 0; j < pat.size(); j++) {
+			for (auto j = 0; j < pat.size(); j++) {
 				if (pat[j] == -1)
 					continue;
 

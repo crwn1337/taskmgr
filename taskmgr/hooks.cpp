@@ -13,8 +13,8 @@ namespace hooks {
 			printf("g_GlobalSettings: 0x%p\n", settings);
 			config.globalsettings = settings;
 			config.original_cores = settings->cores;
+			settings->cores = config.width * config.height;
 		}
-		settings->cores = config.width * config.height;
 		return config.IsServer_original(settings);
 	}
 
@@ -27,7 +27,6 @@ namespace hooks {
 		auto elapsed_time = std::chrono::steady_clock::now() - time;
 		auto duration = std::chrono::duration<intmax_t, std::nano>{ std::nano::den / config.fps };
 		if (core == 0 && elapsed_time >= duration) {
-			using namespace std::literals;
 			time = (std::chrono::steady_clock::now() - (elapsed_time - std::chrono::nanoseconds(duration.count())));
 			frame++;
 		}
